@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Diário de Produção — LM</title>
-<link rel="icon" href="logo-lm.png">
+<link rel="icon" href="logo-setor.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{
@@ -19,6 +19,7 @@
   .topo{position:sticky;top:0;z-index:20}
   header{background:var(--azul);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
   header img{height:34px;background:#fff;border-radius:6px;padding:2px 4px}
+  header img.setor{height:40px;width:40px;padding:1px;border-radius:50%}
   header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
   header .sp{flex:1}
   header select{min-width:200px;max-width:100%;padding:7px 10px;border-radius:8px;border:0}
@@ -102,7 +103,7 @@
 <body>
 <div id="gate">
   <div class="box">
-    <img src="logo-lm.png" alt="LM" style="height:50px">
+    <div style="display:flex;gap:14px;justify-content:center;align-items:center"><img src="logo-lm.png" alt="LM" style="height:50px"><img src="logo-setor.png" alt="PDCA LM" style="height:72px"></div>
     <h2 style="margin:10px 0 0;color:var(--azul);font-size:18px">Diário de Produção</h2>
     <p id="gateMsg" style="color:var(--mut);font-size:13px;margin:6px 0 0">Carregando...</p>
     <input id="gatePwd" type="password" placeholder="Senha da obra ou senha geral" autocomplete="current-password" disabled>
@@ -113,6 +114,7 @@
 <div class="topo">
 <header>
   <img src="logo-lm.png" alt="LM">
+  <img src="logo-setor.png" alt="PDCA LM" class="setor">
   <h1>Diário de Produção</h1>
   <span id="modo"></span>
   <span class="sp"></span>
@@ -645,7 +647,7 @@ let IMGS = null;
 async function carregaImgs(){
   if (IMGS) return IMGS;
   const b64 = async f => { const blob = await (await fetch(f)).blob(); return await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); }); };
-  IMGS = { pdca: await b64("pdca.png"), eng: await b64("eng.png") };
+  IMGS = { setor: await b64("logo-setor.png"), eng: await b64("eng.png") };
   return IMGS;
 }
 
@@ -687,7 +689,7 @@ function montaPlanilha(wb, nomeAba, obra, w, ref, semanas, imgs){
   bloco(ws, 3,12, 5,15, xlDate(ref), { fill:C.BRANCO, bold:true, size:14, fmt:"dd/mm/yyyy" });
   bloco(ws, 3,CQ, 6,CQ, "ADERÊNCIA DIÁRIA / ACUMULADA\n(REAL/PROG)\n%", { fill:C.BRANCO, size:14 });
   ws.addImage(wb.addImage({ base64:imgs.eng, extension:"png" }), { tl:{ col:2.25, row:2.12 }, ext:{ width:62, height:56 } });
-  ws.addImage(wb.addImage({ base64:imgs.pdca, extension:"png" }), { tl:{ col:7.15, row:2.08 }, ext:{ width:80, height:64 } });
+  ws.addImage(wb.addImage({ base64:imgs.setor, extension:"png" }), { tl:{ col:7.12, row:2.06 }, ext:{ width:74, height:74 } });
 
   const cab = ["ITEM","RESUMO GERAL DA SEMANA","PROG. / REAL","QDTE. MÊS","QDTE. SEMANA","UNIDADE"];
   cab.forEach((t,i) => bloco(ws, 6,3+i, 6,3+i, t, { fill:C.BRANCO, bold:true }));
