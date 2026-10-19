@@ -6,6 +6,7 @@
 <title>Diário de Produção — LM</title>
 <link rel="icon" href="logo-setor.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --azul:#1F497D; --azul2:#0070C0; --azulClaro:#DCE6F1; --acc:#4F81BD;
@@ -102,6 +103,14 @@
   @media (max-width:700px){ .ob{grid-template-columns:1fr 1fr} }
   #sair{background:transparent;color:#fff;border:1px solid #8fb0d9;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
   #acessoLbl{font-size:12px;color:#cfe0f5}
+  .rel{width:1400px;background:#fff;color:#000;padding:16px;border:2px solid #000;font-family:"Aptos Narrow","Calibri","Arial Narrow",Arial,sans-serif}
+  .rel table{border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px}
+  .rel td{border:1px solid #000;text-align:center;vertical-align:middle;padding:2px 4px;height:22px;overflow:hidden;word-wrap:break-word}
+  .rel td.nb{border:none;background:#fff}
+  .rel td.l{text-align:left}.rel td.r{text-align:right;padding-right:8px}
+  .rel .b,.rel .b td{font-weight:700}
+  .rel tr.sp td{height:12px}
+  .rel .rod{font-size:10px;color:#7f7f7f;font-style:italic;margin-top:6px}
   #toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
   #toast.on{opacity:1}#toast.err{background:var(--erro)}
   #gate{position:fixed;inset:0;background:var(--azul);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -583,6 +592,7 @@ function renderSemana(){
   h += `<div class="row" style="margin-bottom:12px">
     <label style="font-size:14px">Data da atualização: <input type="date" id="refInp" value="${ref}" min="${S.semana}" max="${addDays(S.semana,6)}" style="padding:7px;border:1px solid var(--borda);border-radius:8px"></label>
     <button class="btn pri" id="expObra">Exportar Excel — esta obra</button>
+    <button class="btn" id="expImg">Imagem A4 — esta obra</button>
     ${S.acesso?.geral ? '<button class="btn" id="expTodas">Exportar Excel — todas as obras</button>' : ""}</div>`;
   const nt = naoTrab(w);
   const adCls = ad => ad !== null && ad >= 1 ? "adg" : "adr";
@@ -828,6 +838,118 @@ function montaPlanilha(wb, nomeAba, obra, w, ref, imgs){
   return ws;
 }
 
+/* ----------------------- imagem A4 (mesmo desenho do Excel) ----------------------- */
+function relatorioHTML(obra, w, ref){
+  const ate = dayIdx(ref), nt = naoTrab(w), datas = DIAS.map((_,d) => addDays(w.inicio, d));
+  const av = obra.avanco || {};
+  const n2 = v => (v === null || v === undefined || v === "") ? "" : Number(v).toLocaleString("pt-BR",{ minimumFractionDigits:2, maximumFractionDigits:2 });
+  const soma = m => { const v = somaSemana(m); return v ? n2(v) : ""; };
+  const pct = v => v === null ? "" : (v*100).toLocaleString("pt-BR",{ minimumFractionDigits:2, maximumFractionDigits:2 }) + "%";
+  const dm = s => fmtCurto(s), dmy = s => { const [y,m,d] = s.split("-"); return `${d}/${m}/${y.slice(2)}`; };
+  const MES = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+  const dmes = s => { const [,m,d] = s.split("-"); return `${d}/${MES[+m-1]}`; };
+  const AZ = "#17375E", AC = "#4F81BD", ACL = "#DCE6F1", CZ = "#A6A6A6", T25 = "#C4BD97", T10 = "#DDD9C4", AM = "#FFFF00";
+  const corAd = v => v !== null && v >= 1 ? "background:#92D050;color:#000" : "background:#FF0000;color:#fff";
+  const gap = '<td class="nb"></td>';
+  const temAv = av.previsto != null && av.realizado != null, desv = temAv ? (av.realizado - av.previsto)/100 : null;
+  const VD = "background:#00B050", VM = "background:#FF0000";
+
+  let h = `<div class="rel"><table>
+    <colgroup><col style="width:70px"><col style="width:330px"><col style="width:100px"><col style="width:105px"><col style="width:72px">
+    ${DIAS.map(() => '<col style="width:80px">').join("")}<col style="width:14px"><col style="width:118px"></colgroup>
+    <tr style="height:30px"><td rowspan="3"><img src="icone-obra.png" style="height:62px"></td>
+      <td colspan="2" rowspan="3" class="b" style="font-size:19px;line-height:1.25">PROGRAMAÇÃO SEMANAL<br>OBRA ${esc(obra.nome)}</td>
+      <td rowspan="3"><img src="logo-setor.png" style="height:66px"></td>
+      <td colspan="2" class="b" style="font-size:10px">DATA DE ATUALIZAÇÃO:</td>
+      <td colspan="6" class="b" style="font-size:15px">AVANÇO FÍSICO/FINANCEIRO${av.ref ? " - ATÉ " + esc(av.ref) : ""}</td>
+      ${gap}<td rowspan="4" class="b" style="font-size:13px;line-height:1.3">ADERÊNCIA<br>DIÁRIA<br>ACUMULADA<br><span style="font-weight:400">(REAL/PROG)<br>%</span></td></tr>
+    <tr style="height:24px"><td colspan="2" rowspan="2" class="b" style="font-size:16px">${fmtBR(ref)}</td>
+      <td colspan="2" class="b" style="font-size:15px">PREVISTO</td><td colspan="2" class="b" style="font-size:15px">REALIZADO</td><td colspan="2" class="b" style="font-size:15px">DESVIO</td>${gap}</tr>
+    <tr style="height:24px"><td colspan="2" class="b" style="font-size:15px;${av.previsto != null ? VD : ""}">${av.previsto != null ? pct(av.previsto/100) : ""}</td>
+      <td colspan="2" class="b" style="font-size:15px;${temAv ? (av.realizado >= av.previsto ? VD : VM) : ""}">${av.realizado != null ? pct(av.realizado/100) : ""}</td>
+      <td colspan="2" class="b" style="font-size:15px;${temAv ? (desv >= 0 ? VD : VM) : ""}">${temAv ? pct(desv) : ""}</td>${gap}</tr>
+    <tr style="height:34px" class="b">${["ITEM","RESUMO GERAL DA SEMANA","PROG. / REAL","QDTE. SEMANAL","UNIDADE"].map(t => `<td>${t}</td>`).join("")}
+      ${datas.map(d => `<td>${dm(d)}</td>`).join("")}${gap}</tr>
+    <tr style="background:${AZ};color:#fff"><td>1</td><td class="b l" style="font-size:15px">ITEM</td>${'<td></td>'.repeat(10)}${gap}<td></td></tr>`;
+
+  const par = (item, desc, a, np) => {
+    const fp = np ? T10 : ACL;
+    const ad = a ? aderencia(a, ate) : null;
+    const dias = (m, prog) => DIAS.map((_,d) => {
+      const v = a ? val(m, d) : null;
+      const bg = nt[d] && !np ? CZ : (prog ? fp : "");
+      return `<td style="${bg ? "background:"+bg : ""}">${v === null ? "" : n2(v)}</td>`;
+    }).join("");
+    const cab = np ? `<td colspan="2" rowspan="2">${esc(desc)}</td>` : `<td rowspan="2">${item}</td><td rowspan="2" class="l">${esc(desc)}</td>`;
+    return `<tr>${cab}<td style="background:${fp}">PROGRAMADO</td><td style="background:${fp}">${a ? soma(a.prog) : ""}</td><td style="background:${fp}">${a ? esc(a.unidade) : ""}</td>${dias(a?.prog, true)}${gap}
+        <td rowspan="2" class="b" style="${a ? corAd(ad) : ""}">${a ? pct(ad) : ""}</td></tr>
+      <tr><td>REALIZADO</td><td>${a ? soma(a.real) : ""}</td><td>${a ? esc(a.unidade) : ""}</td>${dias(a?.real, false)}${gap}</tr>`;
+  };
+  for (const g of estrutura(w)){
+    h += `<tr style="background:${AC}" class="b"><td>${g.item}</td><td class="l">${esc(g.nome)}</td>${'<td></td>'.repeat(10)}${gap}<td></td></tr>`;
+    for (const a of g.acts) h += par(a.item, a.descricao, a, false);
+  }
+
+  // dia não trabalhado, clima e observações
+  const obsTxt = Object.entries(w.obs||{}).sort().map(([d,t]) => `${dm(addDays(w.inicio,+d))}: ${esc(t)}`).join("<br>");
+  h += `<tr class="sp"><td colspan="14" class="nb"></td></tr>
+    <tr><td colspan="2" class="nb r">DIA NÃO TRABALHADO</td><td style="background:${CZ}"></td><td class="nb"></td>
+      <td class="b" style="background:${AM};font-size:15px">CLIMA</td>${datas.map(d => `<td style="background:${AM}">${dmes(d)}</td>`).join("")}${gap}<td class="nb"></td></tr>`;
+  TURNOS.forEach(([k,lbl],i) => {
+    const esq = i === 0 ? `<td colspan="3" class="nb"></td>`
+              : i === 1 ? `<td colspan="3" class="b l" style="background:${CZ}">OBS.:</td>`
+              : `<td colspan="3" rowspan="4" class="b l" style="vertical-align:top;font-size:12px">${obsTxt}</td>`;
+    const c = CLIMAS[i];
+    h += `<tr>${esq}<td class="b" style="background:${c.cor};color:${c.txt};font-size:10px">${c.k}</td><td>${lbl}</td>
+      ${DIAS.map((_,d) => { const cc = CLIMAS.find(x => x.k === ((w.clima||{})[d] || {})[k]); return `<td style="${cc ? "background:"+cc.cor : nt[d] ? "background:"+CZ : ""}"></td>`; }).join("")}${gap}<td class="nb"></td></tr>`;
+  });
+  for (let i = 0; i < 3; i++) h += `<tr><td colspan="11" class="nb"></td></tr>`;
+
+  // tarefas não programadas
+  h += `<tr class="sp"><td colspan="14" class="nb"></td></tr>
+    <tr class="b" style="background:${T25};font-size:12px"><td colspan="2">TAREFAS NÃO PROGRAMADAS</td><td>PROG. / REAL</td><td>QUANTIDADE</td><td>UNIDADE</td>
+      ${datas.map(d => `<td>${dmy(d)}</td>`).join("")}<td class="nb" style="background:#fff"></td><td class="nb" style="background:#fff"></td></tr>`;
+  for (const a of naoProgList(w)) h += par("", a.descricao, a, true);
+  h += par("", "", null, true);
+  h += `</table><div class="rod">Gerado pelo Diário de Produção LM em ${new Date().toLocaleString("pt-BR")}</div></div>`;
+  return h;
+}
+
+async function exportarImagem(){
+  const o = obraAtual(); if (!o) return;
+  const ref = S.refSemana || refPadrao(), w = S.week;
+  const b = $("#expImg"); b.disabled = true; b.textContent = "Gerando imagem...";
+  const host = document.createElement("div");
+  host.style.cssText = "position:fixed;left:-20000px;top:0;z-index:-1";
+  host.innerHTML = relatorioHTML(o, w, ref);
+  document.body.appendChild(host);
+  try {
+    await Promise.all([...host.querySelectorAll("img")].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })));
+    const cv = await html2canvas(host.firstElementChild, { scale:2.5, backgroundColor:"#ffffff", logging:false });
+    // folha A4 paisagem a 300 dpi (3508 x 2480), com margem; o quadro é reduzido para caber inteiro
+    const A4W = 3508, A4H = 2480, M = 110;
+    const pg = document.createElement("canvas"); pg.width = A4W; pg.height = A4H;
+    const ctx = pg.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0,0,A4W,A4H);
+    const k = Math.min((A4W-2*M)/cv.width, (A4H-2*M)/cv.height);
+    const dw = cv.width*k, dh = cv.height*k;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(cv, (A4W-dw)/2, M, dw, dh);
+    const blob = await new Promise(r => pg.toBlob(r, "image/png"));
+    const nome = `PROGRAMAÇÃO SEMANAL - ${o.nome} - ${fmtCurto(w.inicio).replace("/","-")} a ${fmtCurto(addDays(w.inicio,6)).replace("/","-")}.png`;
+    const file = new File([blob], nome, { type:"image/png" });
+    // no celular abre o "compartilhar" (WhatsApp etc.); no computador baixa o arquivo
+    if (matchMedia("(pointer:coarse)").matches && navigator.canShare && navigator.canShare({ files:[file] })){
+      try { await navigator.share({ files:[file], title:nome }); toast("Imagem pronta."); return; }
+      catch(e){ if (e.name === "AbortError") return; }
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = nome; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast("Imagem A4 gerada.");
+  } catch(e){ console.error(e); toast("Erro ao gerar imagem: " + e.message, true); }
+  finally { host.remove(); b.disabled = false; b.textContent = "Imagem A4 — esta obra"; }
+}
+
 async function exportar(obras){
   const ref = S.refSemana || refPadrao();
   const inicio = S.semana;
@@ -925,6 +1047,7 @@ document.addEventListener("click", async ev => {
   if (t.id === "salvarProg"){ await salvarProg(); return; }
   // exportação
   if (t.id === "expObra"){ await exportar([obraAtual()]); return; }
+  if (t.id === "expImg"){ await exportarImagem(); return; }
   if (t.id === "expTodas"){ await exportar(S.obras.filter(o => o.ativa !== false)); return; }
   // obras
   if (t.id === "addObra"){
