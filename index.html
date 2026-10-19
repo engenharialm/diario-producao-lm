@@ -82,10 +82,12 @@
   table.sem td.baixo{color:#C00000;font-weight:700}
   table.sem th.fds{background:#efefef}
   /* Obras */
-  .ob{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eef1f6}
+  .ob{display:grid;grid-template-columns:1.4fr 1fr 130px auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eef1f6}
   .ob input{padding:8px;border:1px solid var(--borda);border-radius:8px;min-width:0}
   .ob.inativa{opacity:.55}
-  @media (max-width:600px){ .ob{grid-template-columns:1fr 1fr} }
+  @media (max-width:700px){ .ob{grid-template-columns:1fr 1fr} }
+  #sair{background:transparent;color:#fff;border:1px solid #8fb0d9;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+  #acessoLbl{font-size:12px;color:#cfe0f5}
   #toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
   #toast.on{opacity:1}#toast.err{background:var(--erro)}
   #gate{position:fixed;inset:0;background:var(--azul);display:flex;align-items:center;justify-content:center;z-index:100}
@@ -102,8 +104,9 @@
   <div class="box">
     <img src="logo-lm.png" alt="LM" style="height:50px">
     <h2 style="margin:10px 0 0;color:var(--azul);font-size:18px">Diário de Produção</h2>
-    <input id="gatePwd" type="password" placeholder="Senha" autocomplete="current-password">
-    <button class="btn pri" id="gateBtn" style="width:100%">Entrar</button>
+    <p id="gateMsg" style="color:var(--mut);font-size:13px;margin:6px 0 0">Carregando...</p>
+    <input id="gatePwd" type="password" placeholder="Senha da obra ou senha geral" autocomplete="current-password" disabled>
+    <button class="btn pri" id="gateBtn" style="width:100%" disabled>Entrar</button>
   </div>
 </div>
 
@@ -114,6 +117,8 @@
   <span id="modo"></span>
   <span class="sp"></span>
   <select id="obraSel" aria-label="Obra"></select>
+  <span id="acessoLbl"></span>
+  <button id="sair" title="Trocar senha / sair">Sair</button>
 </header>
 <nav>
   <button data-tab="diario" class="on">Diário do dia</button>
@@ -139,6 +144,9 @@
    nada do Consolidado de Mão de Obra, Cotações ou Licitações.
    Abrir com ?local no fim do endereço usa só o navegador atual (testes).
    ------------------------------------------------------------------------- */
+// LM12 = acesso geral (todas as obras + cadastro de obras).
+// Cada obra pode ter a sua senha (cadastrada na aba Obras): quem entra com ela
+// só vê e lança naquela obra. Trava simples, sem servidor, como os demais sistemas.
 const SITE_PASSWORD = "LM12";
 const firebaseConfig = {
   apiKey: "AIzaSyDcNsjr0GdYPj70IF74G0hhhKc8qQ_jpkc",
@@ -255,8 +263,16 @@ const S = {
   week: null,         // documento da semana atual
   draft: null,        // rascunho da programação
   clima: {},          // rascunho do clima do dia
-  nome: localStorage.getItem("diarioLM_nome") || ""
+  nome: localStorage.getItem("diarioLM_nome") || "",
+  acesso: null        // { geral:true } ou { geral:false, ids:[...] }
 };
+const podeVer = o => S.acesso?.geral || (S.acesso?.ids || []).includes(o.id);
+function resolveAcesso(senha){
+  if (!senha) return null;
+  if (senha === SITE_PASSWORD) return { geral:true };
+  const ids = S.obras.filter(o => o.ativa !== false && o.senha && o.senha === senha).map(o => o.id);
+  return ids.length ? { geral:false, ids } : null;
+}
 const weekId = (obraId, inicio) => `${obraId}_${inicio}`;
 const blankWeek = (obraId, inicio) => ({ obraId, inicio, atividades:{}, naoProg:{}, clima:{}, obs:{}, atualizado:{} });
 const obraAtual = () => S.obras.find(o => o.id === S.obraId);
@@ -315,7 +331,7 @@ function semObra(){
 }
 
 function renderObraSel(){
-  const ativas = S.obras.filter(o => o.ativa !== false).sort((a,b) => a.nome.localeCompare(b.nome));
+  const ativas = S.obras.filter(o => o.ativa !== false && podeVer(o)).sort((a,b) => a.nome.localeCompare(b.nome));
   if (!ativas.find(o => o.id === S.obraId)) S.obraId = ativas[0]?.id || "";
   $("#obraSel").innerHTML = ativas.length
     ? ativas.map(o => `<option value="${o.id}" ${o.id===S.obraId?"selected":""}>${esc(o.nome)}</option>`).join("")
@@ -539,7 +555,7 @@ function renderSemana(){
   h += `<div class="row" style="margin-bottom:12px">
     <label style="font-size:14px">Data da atualização: <input type="date" id="refInp" value="${ref}" min="${S.semana}" max="${addDays(S.semana,6)}" style="padding:7px;border:1px solid var(--borda);border-radius:8px"></label>
     <button class="btn pri" id="expObra">Exportar Excel — esta obra</button>
-    <button class="btn" id="expTodas">Exportar Excel — todas as obras</button></div>`;
+    ${S.acesso?.geral ? '<button class="btn" id="expTodas">Exportar Excel — todas as obras</button>' : ""}</div>`;
   h += `<div class="tbwrap"><table class="sem"><thead><tr><th>ITEM</th><th>DESCRIÇÃO</th><th>PROG./REAL</th><th>SEMANA</th><th>UN</th>
     ${DIAS.map((dn,d) => `<th class="${d>=5?"fds":""}">${dn}<br>${fmtCurto(addDays(S.semana,d))}</th>`).join("")}<th>ADERÊNCIA</th></tr></thead><tbody>`;
   if (!grupos.length) h += `<tr><td colspan="13" class="vazio">Sem programação nesta semana.</td></tr>`;
@@ -573,12 +589,15 @@ function renderObras(){
   let h = `<div class="card"><h3>Nova obra</h3>
     <div class="row"><input id="novaObra" placeholder="Nome da obra (ex.: CONSELHEIRO LAFAIETE)" style="flex:2;min-width:220px;padding:9px;border:1px solid var(--borda);border-radius:8px">
     <input id="novoEng" placeholder="Engenheiro responsável" style="flex:1;min-width:160px;padding:9px;border:1px solid var(--borda);border-radius:8px">
-    <button class="btn pri" id="addObra">Adicionar</button></div></div>`;
+    <input id="novaSenha" placeholder="Senha da obra" style="width:150px;padding:9px;border:1px solid var(--borda);border-radius:8px">
+    <button class="btn pri" id="addObra">Adicionar</button></div>
+    <p style="color:var(--mut);font-size:13px;margin:8px 0 0">Quem entrar com a senha da obra só vê e lança nela. A senha geral acessa todas.</p></div>`;
   h += `<div class="card"><h3>Obras cadastradas</h3>`;
   if (!lista.length) h += `<div class="vazio">Nenhuma obra ainda.</div>`;
   for (const o of lista){
     h += `<div class="ob ${o.ativa===false?"inativa":""}" data-id="${o.id}">
       <input data-of="nome" value="${esc(o.nome)}"><input data-of="engenheiro" value="${esc(o.engenheiro||"")}" placeholder="Engenheiro">
+      <input data-of="senha" value="${esc(o.senha||"")}" placeholder="Senha da obra">
       <button class="btn peq" data-salvaobra>Salvar</button>
       <button class="btn peq" data-ativa>${o.ativa===false?"Reativar":"Encerrar"}</button></div>`;
   }
@@ -587,6 +606,12 @@ function renderObras(){
   setSavebar("");
 }
 
+function aplicaAcessoUI(){
+  const geral = S.acesso?.geral;
+  $('[data-tab="obras"]').style.display = geral ? "" : "none";
+  $("#acessoLbl").textContent = geral ? "Acesso geral" : "Acesso da obra";
+  if (!geral && S.tab === "obras") $('[data-tab="diario"]').click();
+}
 function setSavebar(html){ $("#savebar").innerHTML = html; $("#savebar").style.display = html ? "flex" : "none"; }
 function render(){
   ({ diario:renderDiario, prog:renderProg, semana:renderSemana, obras:renderObras })[S.tab]();
@@ -885,8 +910,10 @@ document.addEventListener("click", async ev => {
   if (t.id === "addObra"){
     const nome = $("#novaObra").value.trim().toUpperCase(); if (!nome){ toast("Informe o nome da obra.", true); return; }
     if (S.obras.find(o => norm(o.nome) === norm(nome))){ toast("Já existe uma obra com esse nome.", true); return; }
+    const senha = $("#novaSenha").value.trim();
+    if (!senhaValida(senha, null)) return;
     const id = uid();
-    await store.set(COL_OBRAS, id, { nome, engenheiro: $("#novoEng").value.trim(), ativa:true, criadoEm:new Date().toISOString() });
+    await store.set(COL_OBRAS, id, { nome, engenheiro: $("#novoEng").value.trim(), senha, ativa:true, criadoEm:new Date().toISOString() });
     await carregaObras(); S.obraId = id; localStorage.setItem("diarioLM_obra", id);
     renderObraSel(); await loadWeek(); renderObras(); toast("Obra adicionada."); return;
   }
@@ -894,7 +921,9 @@ document.addEventListener("click", async ev => {
     const div = t.closest(".ob"), id = div.dataset.id, o = S.obras.find(x => x.id === id);
     const upd = t.hasAttribute("data-ativa")
       ? { ativa: o.ativa === false }
-      : { nome: div.querySelector('[data-of="nome"]').value.trim().toUpperCase() || o.nome, engenheiro: div.querySelector('[data-of="engenheiro"]').value.trim() };
+      : { nome: div.querySelector('[data-of="nome"]').value.trim().toUpperCase() || o.nome, engenheiro: div.querySelector('[data-of="engenheiro"]').value.trim(),
+          senha: div.querySelector('[data-of="senha"]').value.trim() };
+    if (upd.senha !== undefined && !senhaValida(upd.senha, id)) return;
     await store.patch(COL_OBRAS, id, upd);
     await carregaObras(); renderObraSel(); await loadWeek(); renderObras(); toast("Obra atualizada."); return;
   }
@@ -909,34 +938,52 @@ document.addEventListener("change", async ev => {
 });
 
 async function carregaObras(){ S.obras = await store.list(COL_OBRAS); }
+function senhaValida(senha, id){
+  if (!senha) return true; // sem senha: só a senha geral acessa a obra
+  if (senha.length < 4){ toast("A senha da obra precisa ter ao menos 4 caracteres.", true); return false; }
+  if (senha === SITE_PASSWORD){ toast("A senha da obra não pode ser igual à senha geral.", true); return false; }
+  if (S.obras.find(o => o.id !== id && o.senha === senha)){ toast("Essa senha já é usada em outra obra.", true); return false; }
+  return true;
+}
 
-async function start(){
+async function abrir(){
+  $("#gate").style.display = "none";
+  renderObraSel();
+  aplicaAcessoUI();
+  await loadWeek();
+  render();
+}
+
+async function boot(){
   document.body.insertAdjacentHTML("beforeend", `<datalist id="unidades">${UNIDADES.map(u => `<option value="${u}">`).join("")}</datalist>`);
   try {
     await initDb();
     await carregaObras();
   } catch(e){
     console.error(e);
-    $("#v-diario").innerHTML = `<div class="card vazio">Não foi possível conectar ao banco de dados.<br>${esc(e.message)}<br><br><button class="btn" onclick="location.reload()">Tentar de novo</button></div>`;
+    $("#gateMsg").innerHTML = `Não foi possível conectar ao banco de dados.<br>${esc(e.message)}<br><a href="#" onclick="location.reload()">Tentar de novo</a>`;
     return;
   }
-  renderObraSel();
-  await loadWeek();
-  render();
-}
-
-// senha de acesso (trava simples, igual aos outros sistemas da LM)
-function liberar(){ $("#gate").remove(); start(); }
-if (localStorage.getItem("diarioLM_ok") === "1") liberar();
-else {
-  const tenta = () => {
-    if ($("#gatePwd").value === SITE_PASSWORD){ localStorage.setItem("diarioLM_ok","1"); liberar(); }
-    else { toast("Senha incorreta.", true); $("#gatePwd").select(); }
+  // a senha guardada neste aparelho é revalidada a cada abertura (se a senha da obra mudar, perde o acesso)
+  S.acesso = resolveAcesso(localStorage.getItem("diarioLM_senha"));
+  if (S.acesso){ await abrir(); return; }
+  localStorage.removeItem("diarioLM_senha");
+  $("#gateMsg").textContent = "Digite a senha da sua obra (ou a senha geral).";
+  $("#gatePwd").disabled = false; $("#gateBtn").disabled = false;
+  const tenta = async () => {
+    const senha = $("#gatePwd").value.trim();
+    const ac = resolveAcesso(senha);
+    if (!ac){ toast("Senha incorreta.", true); $("#gatePwd").select(); return; }
+    S.acesso = ac; localStorage.setItem("diarioLM_senha", senha);
+    await abrir();
   };
   $("#gateBtn").onclick = tenta;
   $("#gatePwd").addEventListener("keydown", e => { if (e.key === "Enter") tenta(); });
   $("#gatePwd").focus();
 }
+$("#sair").onclick = () => { if (confirm("Sair e digitar outra senha?")){ localStorage.removeItem("diarioLM_senha"); location.reload(); } };
+localStorage.removeItem("diarioLM_ok");
+boot();
 </script>
 </body>
 </html>
