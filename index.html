@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diário de Produção — LM</title>
+<link rel="icon" href="logo-lm.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --azul:#1F497D; --azul2:#0070C0; --azulClaro:#DCE6F1; --acc:#4F81BD;
+    --bg:#F3F5F9; --card:#fff; --txt:#1d2433; --mut:#6b7385; --borda:#d9dee8;
+    --ok:#1e8e3e; --erro:#c62828; --ader:#C1FFDD;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  button,input,select,textarea{font:inherit}
+  input,select,textarea{font-size:16px}
+  .topo{position:sticky;top:0;z-index:20}
+  header{background:var(--azul);color:#fff;padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  header img{height:34px;background:#fff;border-radius:6px;padding:2px 4px}
+  header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.2px}
+  header .sp{flex:1}
+  header select{min-width:200px;max-width:100%;padding:7px 10px;border-radius:8px;border:0}
+  .badge{background:#ffb300;color:#000;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700}
+  nav{display:flex;gap:4px;padding:8px 16px 0;background:var(--azul);overflow-x:auto}
+  nav button{background:transparent;border:0;color:#cfe0f5;padding:9px 14px;border-radius:10px 10px 0 0;font-weight:600;cursor:pointer;white-space:nowrap}
+  nav button.on{background:var(--bg);color:var(--azul)}
+  main{max-width:1180px;margin:0 auto;padding:16px 16px 110px}
+  .view{display:none}.view.on{display:block}
+  .card{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:14px;margin-bottom:12px}
+  .card h3{margin:0 0 10px;font-size:15px;color:var(--azul)}
+  .grp{font-weight:700;color:#fff;background:var(--acc);border-radius:8px;padding:6px 10px;margin:14px 0 8px;font-size:14px}
+  .act{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;border-bottom:1px solid #eef1f6;padding:10px 0}
+  .act:last-child{border-bottom:0}
+  .act .d{font-weight:600}
+  .act .m{color:var(--mut);font-size:13px}
+  .act input{width:118px;text-align:right;padding:9px 10px;border:1px solid var(--borda);border-radius:8px}
+  .act .un{color:var(--mut);font-size:13px;margin-left:4px}
+  .daybar,.weekbar{display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+  .daybar button,.weekbar button{width:42px;height:42px;border-radius:10px;border:1px solid var(--borda);background:#fff;font-size:20px;cursor:pointer}
+  .daybar input{padding:8px 10px;border:1px solid var(--borda);border-radius:8px}
+  .daybar .wd,.weekbar .wk{font-weight:700;color:var(--azul);min-width:70px;text-align:center}
+  .clima{display:grid;grid-template-columns:70px repeat(3,1fr);gap:6px;align-items:center}
+  .clima b{font-size:13px;color:var(--mut)}
+  .clima button{padding:9px 4px;border-radius:8px;border:2px solid var(--borda);background:#fff;cursor:pointer;font-weight:600;font-size:13px}
+  .clima button.sel{border-color:#000}
+  textarea{width:100%;min-height:80px;padding:10px;border:1px solid var(--borda);border-radius:8px;resize:vertical}
+  .btn{padding:10px 16px;border-radius:10px;border:1px solid var(--borda);background:#fff;cursor:pointer;font-weight:600}
+  .btn.pri{background:var(--azul2);border-color:var(--azul2);color:#fff}
+  .btn.peq{padding:6px 10px;font-size:13px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .savebar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borda);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;justify-content:center;gap:10px;z-index:30}
+  .savebar .btn{min-width:240px}
+  .np-new{display:grid;grid-template-columns:1fr 90px 110px 36px;gap:6px;margin-top:8px}
+  .np-new input,.np-new select{padding:9px;border:1px solid var(--borda);border-radius:8px;min-width:0}
+  .x{border:0;background:#fde8e8;color:var(--erro);border-radius:8px;cursor:pointer;font-weight:700}
+  .vazio{color:var(--mut);text-align:center;padding:24px}
+  .info{background:#fff8e1;border:1px solid #ffe08a;border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+  /* Programação */
+  .pa{border:1px solid var(--borda);border-radius:10px;padding:10px;margin-bottom:10px;background:#fff}
+  .pa .top{display:grid;grid-template-columns:170px 1fr 90px 110px auto;gap:6px}
+  .pa input,.pa select{padding:8px;border:1px solid var(--borda);border-radius:8px;min-width:0;width:100%}
+  .pa .dias{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}
+  .pa .dias label{font-size:11px;color:var(--mut);text-align:center;display:block}
+  .pa .dias input{text-align:right;padding:7px 5px}
+  .pa .dias .fds input{background:#f2f2f2}
+  .pa .ctl{display:flex;gap:4px}
+  .pa .ctl button{width:34px;height:36px;border-radius:8px;border:1px solid var(--borda);background:#fff;cursor:pointer}
+  .pa .lbl{font-size:11px;color:var(--mut)}
+  @media (max-width:700px){ .pa .top{grid-template-columns:1fr 1fr} .pa .top .desc{grid-column:1/-1} .pa .ctl{grid-column:1/-1;justify-content:flex-end} }
+  /* Semana */
+  .tbwrap{overflow-x:auto;border:1px solid var(--borda);border-radius:10px;background:#fff}
+  table.sem{border-collapse:collapse;font-size:13px;min-width:900px;width:100%}
+  table.sem th,table.sem td{border:1px solid #c9d1de;padding:5px 6px;text-align:center;white-space:nowrap}
+  table.sem th{background:#fff;color:var(--azul)}
+  table.sem td.desc{text-align:left;white-space:normal;min-width:200px}
+  table.sem tr.g td{background:var(--acc);color:#fff;font-weight:700}
+  table.sem tr.p td.v,table.sem tr.p td.pr{background:var(--azulClaro)}
+  table.sem td.ad{background:var(--ader);font-weight:700}
+  table.sem td.baixo{color:#C00000;font-weight:700}
+  table.sem th.fds{background:#efefef}
+  /* Obras */
+  .ob{display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eef1f6}
+  .ob input{padding:8px;border:1px solid var(--borda);border-radius:8px;min-width:0}
+  .ob.inativa{opacity:.55}
+  @media (max-width:600px){ .ob{grid-template-columns:1fr 1fr} }
+  #toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
+  #toast.on{opacity:1}#toast.err{background:var(--erro)}
+  #gate{position:fixed;inset:0;background:var(--azul);display:flex;align-items:center;justify-content:center;z-index:100}
+  #gate .box{background:#fff;border-radius:14px;padding:24px;width:min(340px,90vw);text-align:center}
+  #gate input{width:100%;padding:11px;border:1px solid var(--borda);border-radius:8px;margin:12px 0}
+  .kpi{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .kpi div{background:#fff;border:1px solid var(--borda);border-radius:10px;padding:8px 12px}
+  .kpi b{display:block;font-size:20px;color:var(--azul)}
+  .kpi span{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div id="gate">
+  <div class="box">
+    <img src="logo-lm.png" alt="LM" style="height:50px">
+    <h2 style="margin:10px 0 0;color:var(--azul);font-size:18px">Diário de Produção</h2>
+    <input id="gatePwd" type="password" placeholder="Senha" autocomplete="current-password">
+    <button class="btn pri" id="gateBtn" style="width:100%">Entrar</button>
+  </div>
+</div>
+
+<div class="topo">
+<header>
+  <img src="logo-lm.png" alt="LM">
+  <h1>Diário de Produção</h1>
+  <span id="modo"></span>
+  <span class="sp"></span>
+  <select id="obraSel" aria-label="Obra"></select>
+</header>
+<nav>
+  <button data-tab="diario" class="on">Diário do dia</button>
+  <button data-tab="prog">Programação da semana</button>
+  <button data-tab="semana">Semana / Exportar</button>
+  <button data-tab="obras">Obras</button>
+</nav>
+</div>
+<main>
+  <section id="v-diario" class="view on"></section>
+  <section id="v-prog" class="view"></section>
+  <section id="v-semana" class="view"></section>
+  <section id="v-obras" class="view"></section>
+</main>
+<div class="savebar" id="savebar"></div>
+<div id="toast"></div>
+
+<script type="module">
+/* -------------------------------------------------------------------------
+   CONFIGURAÇÃO
+   Mesmo projeto Firebase dos outros sistemas da LM, mas com coleções
+   próprias (diario_obras / diario_semanas): este app não lê nem altera
+   nada do Consolidado de Mão de Obra, Cotações ou Licitações.
+   Abrir com ?local no fim do endereço usa só o navegador atual (testes).
+   ------------------------------------------------------------------------- */
+const SITE_PASSWORD = "LM12";
+const firebaseConfig = {
+  apiKey: "AIzaSyDcNsjr0GdYPj70IF74G0hhhKc8qQ_jpkc",
+  authDomain: "lm-construtora-13c8f.firebaseapp.com",
+  projectId: "lm-construtora-13c8f",
+  storageBucket: "lm-construtora-13c8f.firebasestorage.app",
+  messagingSenderId: "384896887716",
+  appId: "1:384896887716:web:cfa633578043bda6a2af31"
+};
+const COL_OBRAS = "diario_obras";
+const COL_SEMANAS = "diario_semanas";
+const LOCAL = new URLSearchParams(location.search).has("local");
+
+const DIAS = ["SEG","TER","QUA","QUI","SEX","SÁB","DOM"];
+const DIAS_LONGO = ["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"];
+const CLIMAS = [
+  { k:"BOM",     cor:"#FFFF00", txt:"#000", argb:"FFFFFF00", fargb:"FF000000" },
+  { k:"NUBLADO", cor:"#B7DEE8", txt:"#000", argb:"FFB7DEE8", fargb:"FF000000" },
+  { k:"CHUVOSO", cor:"#31869B", txt:"#fff", argb:"FF31869B", fargb:"FFFFFFFF" }
+];
+const TURNOS = [["manha","MANHÃ"],["tarde","TARDE"],["noite","NOITE"]];
+const GRUPOS_PADRAO = ["TERRAPLANAGEM","DRENAGEM","PAVIMENTAÇÃO","SINALIZAÇÃO","OBRAS DE ARTE","SERVIÇOS COMPLEMENTARES"];
+const UNIDADES = ["m","m²","m³","t","un","km","vb","h"];
+
+/* ------------------------------- utilidades ------------------------------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const pad = n => String(n).padStart(2,"0");
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseIso = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d = parseIso(s); d.setDate(d.getDate()+n); return iso(d); };
+const mondayOf = s => { const d = parseIso(s); d.setDate(d.getDate() - (d.getDay()+6)%7); return iso(d); };
+const dayIdx = s => (parseIso(s).getDay()+6)%7;
+const fmtBR = s => s ? s.split("-").reverse().join("/") : "";
+const fmtCurto = s => { const [,m,d] = s.split("-"); return `${d}/${m}`; };
+const hoje = () => iso(new Date());
+const ontem = () => addDays(hoje(), -1);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const norm = s => String(s||"").trim().toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+function num(v){
+  if (v === null || v === undefined) return null;
+  let s = String(v).trim(); if (!s) return null;
+  if (s.includes(",")) s = s.replace(/\./g,"").replace(",",".");
+  const n = Number(s); return isFinite(n) ? n : null;
+}
+const fmtNum = n => (n === null || n === undefined || n === "") ? "" : Number(n).toLocaleString("pt-BR",{maximumFractionDigits:2});
+const fmtPct = n => n === null ? "—" : Math.round(n*100) + "%";
+function toast(msg, err){
+  const t = $("#toast"); t.textContent = msg; t.className = "on" + (err ? " err" : "");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.className = "", 3200);
+}
+
+/* ------------------------------ armazenamento ------------------------------ */
+const DEL = { __del: true };
+let fs = null, db = null;
+const LS_KEY = "diarioLM_local";
+const localData = () => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } };
+const localSave = d => localStorage.setItem(LS_KEY, JSON.stringify(d));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+const store = {
+  async list(col, field, val){
+    if (LOCAL){
+      const c = localData()[col] || {};
+      return Object.entries(c).map(([id,v]) => ({ id, ...v })).filter(r => !field || r[field] === val);
+    }
+    const q = field ? fs.query(fs.collection(db,col), fs.where(field,"==",val)) : fs.collection(db,col);
+    const snap = await fs.getDocs(q);
+    return snap.docs.map(d => ({ id:d.id, ...d.data() }));
+  },
+  async get(col, id){
+    if (LOCAL){ const v = (localData()[col] || {})[id]; return v ? clone(v) : null; }
+    const s = await fs.getDoc(fs.doc(db,col,id));
+    return s.exists() ? s.data() : null;
+  },
+  async set(col, id, data){
+    if (LOCAL){ const d = localData(); (d[col] ||= {})[id] = clone(data); localSave(d); return; }
+    await fs.setDoc(fs.doc(db,col,id), data);
+  },
+  // paths: { "a.b.c": valor | DEL } — só mexe nos campos indicados
+  async patch(col, id, paths){
+    if (LOCAL){
+      const d = localData(); const docu = (d[col] ||= {})[id] ||= {};
+      for (const [p,v] of Object.entries(paths)){
+        const ks = p.split("."); let o = docu;
+        for (const k of ks.slice(0,-1)) o = (o[k] && typeof o[k] === "object") ? o[k] : (o[k] = {});
+        const last = ks[ks.length-1];
+        if (v === DEL) delete o[last]; else o[last] = clone(v);
+      }
+      localSave(d); return;
+    }
+    const upd = {};
+    for (const [p,v] of Object.entries(paths)) upd[p] = v === DEL ? fs.deleteField() : v;
+    await fs.updateDoc(fs.doc(db,col,id), upd);
+  }
+};
+
+async function initDb(){
+  if (LOCAL){ $("#modo").innerHTML = '<span class="badge">MODO TESTE (local)</span>'; return; }
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+  fs = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+  const app = initializeApp(firebaseConfig);
+  db = fs.initializeFirestore(app, { experimentalAutoDetectLongPolling:true, useFetchStreams:false });
+}
+
+/* --------------------------------- estado --------------------------------- */
+const S = {
+  tab: "diario",
+  obras: [],
+  obraId: localStorage.getItem("diarioLM_obra") || "",
+  dia: ontem(),
+  semana: mondayOf(ontem()),
+  week: null,         // documento da semana atual
+  draft: null,        // rascunho da programação
+  clima: {},          // rascunho do clima do dia
+  nome: localStorage.getItem("diarioLM_nome") || ""
+};
+const weekId = (obraId, inicio) => `${obraId}_${inicio}`;
+const blankWeek = (obraId, inicio) => ({ obraId, inicio, atividades:{}, naoProg:{}, clima:{}, obs:{}, atualizado:{} });
+const obraAtual = () => S.obras.find(o => o.id === S.obraId);
+
+async function getWeek(obraId, inicio){
+  const w = await store.get(COL_SEMANAS, weekId(obraId, inicio));
+  return Object.assign(blankWeek(obraId, inicio), w || {}, { _existe: !!w });
+}
+async function patchWeek(paths){
+  const id = weekId(S.obraId, S.semana);
+  const atual = await store.get(COL_SEMANAS, id);
+  if (!atual){
+    const o = obraAtual();
+    await store.set(COL_SEMANAS, id, { ...blankWeek(S.obraId, S.semana), obraNome: o?.nome || "" });
+  }
+  paths.obraNome = obraAtual()?.nome || "";
+  await store.patch(COL_SEMANAS, id, paths);
+}
+async function loadWeek(){
+  if (!S.obraId){ S.week = null; return; }
+  S.week = await getWeek(S.obraId, S.semana);
+  S.draft = null;
+}
+
+// atividades ordenadas e agrupadas, com numeração de item igual ao modelo (1.g.a)
+function estrutura(w){
+  const acts = Object.entries(w.atividades || {}).map(([id,a]) => ({ id, ...a })).sort((a,b) => (a.ordem??0)-(b.ordem??0));
+  const grupos = [];
+  for (const a of acts){
+    let g = grupos.find(g => norm(g.nome) === norm(a.grupo));
+    if (!g){ g = { nome: a.grupo || "SEM GRUPO", acts: [] }; grupos.push(g); }
+    g.acts.push(a);
+  }
+  grupos.forEach((g,gi) => { g.item = `1.${gi+1}`; g.acts.forEach((a,ai) => a.item = `1.${gi+1}.${ai+1}`); });
+  return grupos;
+}
+const naoProgList = w => Object.entries(w.naoProg || {}).map(([id,a]) => ({ id, ...a })).sort((a,b) => (a.ordem??0)-(b.ordem??0));
+const val = (m, d) => (m && m[d] !== undefined && m[d] !== null) ? Number(m[d]) : null;
+
+// aderência acumulada até o dia "ate" (índice 0..6): soma realizado / soma programado
+function aderencia(a, ate){
+  let p = 0, r = 0;
+  for (let d = 0; d <= ate; d++){ p += val(a.prog,d) || 0; r += val(a.real,d) || 0; }
+  return p > 0 ? r/p : null;
+}
+function aderenciaMedia(w, ate){
+  const xs = Object.values(w.atividades || {}).map(a => aderencia(a, ate)).filter(x => x !== null);
+  return xs.length ? xs.reduce((s,x) => s+x, 0)/xs.length : null;
+}
+const somaSemana = m => { let s = 0, tem = false; for (let d = 0; d < 7; d++){ const v = val(m,d); if (v !== null){ s += v; tem = true; } } return tem ? s : null; };
+
+/* --------------------------------- telas --------------------------------- */
+function semObra(){
+  return `<div class="card vazio">Nenhuma obra cadastrada/selecionada.<br><br>
+    <button class="btn pri" onclick="document.querySelector('[data-tab=obras]').click()">Cadastrar obra</button></div>`;
+}
+
+function renderObraSel(){
+  const ativas = S.obras.filter(o => o.ativa !== false).sort((a,b) => a.nome.localeCompare(b.nome));
+  if (!ativas.find(o => o.id === S.obraId)) S.obraId = ativas[0]?.id || "";
+  $("#obraSel").innerHTML = ativas.length
+    ? ativas.map(o => `<option value="${o.id}" ${o.id===S.obraId?"selected":""}>${esc(o.nome)}</option>`).join("")
+    : `<option value="">— sem obras —</option>`;
+}
+
+/* ---- Diário do dia ---- */
+function renderDiario(){
+  const el = $("#v-diario");
+  if (!S.obraId){ el.innerHTML = semObra(); setSavebar(""); return; }
+  const w = S.week, d = dayIdx(S.dia), ds = String(d);
+  const grupos = estrutura(w);
+  S.clima = clone((w.clima || {})[ds] || {});
+  const atu = (w.atualizado || {})[ds];
+  let h = `<div class="daybar">
+      <button data-navdia="-1" aria-label="Dia anterior">‹</button>
+      <input type="date" id="diaInp" value="${S.dia}">
+      <span class="wd">${DIAS_LONGO[d]}</span>
+      <button data-navdia="1" aria-label="Próximo dia">›</button>
+    </div>`;
+  h += `<div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <span style="color:var(--mut);font-size:13px">Engenheiro: <b>${esc(S.nome || "—")}</b> <a href="#" id="trocaNome">trocar</a></span>
+      <span style="color:var(--mut);font-size:13px">${atu ? `Salvo por ${esc(atu.por)} em ${new Date(atu.em).toLocaleString("pt-BR")}` : "Ainda não preenchido"}</span>
+    </div>`;
+
+  if (!grupos.length){
+    h += `<div class="info">Não há atividades programadas para a semana de ${fmtBR(S.semana)}. Cadastre em <b>Programação da semana</b>
+      (ou lance abaixo como atividade não programada).</div>`;
+  } else {
+    h += `<div class="card"><h3>Produção realizada — ${fmtBR(S.dia)}</h3>`;
+    for (const g of grupos){
+      h += `<div class="grp">${g.item} · ${esc(g.nome)}</div>`;
+      for (const a of g.acts){
+        const p = val(a.prog,d), r = val(a.real,d);
+        const sp = somaSemana(a.prog), sr = somaSemana(a.real);
+        h += `<div class="act">
+          <div><div class="d">${esc(a.descricao)}</div>
+            <div class="m">Programado hoje: <b>${p===null?"—":fmtNum(p)+" "+esc(a.unidade)}</b> · Semana: ${fmtNum(sr)||0} / ${fmtNum(sp)||0} ${esc(a.unidade)}</div></div>
+          <div><input inputmode="decimal" data-real="${a.id}" value="${r===null?"":fmtNum(r)}" placeholder="0"><span class="un">${esc(a.unidade)}</span></div>
+        </div>`;
+      }
+    }
+    h += `</div>`;
+  }
+
+  // não programadas
+  const nps = naoProgList(w);
+  h += `<div class="card"><h3>Atividades não programadas</h3>`;
+  for (const a of nps){
+    const r = val(a.real,d);
+    h += `<div class="act"><div><div class="d">${esc(a.descricao)}</div><div class="m">Semana: ${fmtNum(somaSemana(a.real))||0} ${esc(a.unidade)}</div></div>
+      <div><input inputmode="decimal" data-np="${a.id}" value="${r===null?"":fmtNum(r)}" placeholder="0"><span class="un">${esc(a.unidade)}</span></div></div>`;
+  }
+  h += `<div id="npNovos"></div><button class="btn peq" id="addNp" style="margin-top:10px">+ Atividade não programada</button></div>`;
+
+  // clima
+  h += `<div class="card"><h3>Clima</h3><div class="clima">`;
+  for (const [k,lbl] of TURNOS){
+    h += `<b>${lbl}</b>` + CLIMAS.map(c => `<button data-clima="${k}" data-v="${c.k}" style="background:${S.clima[k]===c.k?c.cor:"#fff"};color:${S.clima[k]===c.k?c.txt:"#000"}" class="${S.clima[k]===c.k?"sel":""}">${c.k}</button>`).join("");
+  }
+  h += `</div></div>`;
+
+  h += `<div class="card"><h3>Observações do dia</h3><textarea id="obsInp" placeholder="Ocorrências, equipamento parado, falta de material, interferências...">${esc((w.obs||{})[ds] || "")}</textarea></div>`;
+  el.innerHTML = h;
+  setSavebar(`<button class="btn pri" id="salvarDia">Salvar diário de ${fmtCurto(S.dia)}</button>`);
+}
+
+function addNpRow(){
+  const div = document.createElement("div");
+  div.className = "np-new";
+  div.innerHTML = `<input placeholder="Descrição da atividade" class="npd">
+    <input list="unidades" placeholder="Unid." class="npu">
+    <input inputmode="decimal" placeholder="Qtde hoje" class="npq">
+    <button class="x" title="Remover">✕</button>`;
+  div.querySelector(".x").onclick = () => div.remove();
+  $("#npNovos").appendChild(div);
+  div.querySelector(".npd").focus();
+}
+
+async function ensureNome(){
+  if (S.nome) return true;
+  const n = prompt("Seu nome (fica registrado em quem preencheu o diário):");
+  if (!n || !n.trim()) return false;
+  S.nome = n.trim(); localStorage.setItem("diarioLM_nome", S.nome); return true;
+}
+
+async function salvarDiario(){
+  if (!await ensureNome()) return;
+  const ds = String(dayIdx(S.dia));
+  const paths = {};
+  let erro = false;
+  $$("[data-real]").forEach(i => {
+    const v = num(i.value); if (i.value.trim() && v === null) erro = true;
+    paths[`atividades.${i.dataset.real}.real.${ds}`] = v === null ? DEL : v;
+  });
+  $$("[data-np]").forEach(i => {
+    const v = num(i.value); if (i.value.trim() && v === null) erro = true;
+    paths[`naoProg.${i.dataset.np}.real.${ds}`] = v === null ? DEL : v;
+  });
+  let ordem = naoProgList(S.week).length;
+  for (const row of $$(".np-new")){
+    const desc = row.querySelector(".npd").value.trim(); if (!desc) continue;
+    const q = num(row.querySelector(".npq").value);
+    if (row.querySelector(".npq").value.trim() && q === null) erro = true;
+    paths[`naoProg.${uid()}`] = { ordem: ordem++, descricao: desc.toUpperCase(), unidade: row.querySelector(".npu").value.trim() || "un", real: q === null ? {} : { [ds]: q } };
+  }
+  if (erro){ toast("Há um valor que não é número. Use apenas números (ex.: 12,5).", true); return; }
+  paths[`clima.${ds}`] = S.clima;
+  const obs = $("#obsInp").value.trim();
+  paths[`obs.${ds}`] = obs ? obs : DEL;
+  paths[`atualizado.${ds}`] = { por: S.nome, em: new Date().toISOString() };
+  const b = $("#salvarDia"); b.disabled = true; b.textContent = "Salvando...";
+  try {
+    await patchWeek(paths);
+    await loadWeek();
+    renderDiario();
+    const ad = aderenciaMedia(S.week, dayIdx(S.dia));
+    toast(`Diário salvo. Aderência acumulada da semana: ${fmtPct(ad)}`);
+  } catch(e){
+    console.error(e); toast("Erro ao salvar: " + e.message, true);
+    b.disabled = false; b.textContent = `Salvar diário de ${fmtCurto(S.dia)}`;
+  }
+}
+
+/* ---- Programação da semana ---- */
+function weekbar(){
+  return `<div class="weekbar">
+    <button data-navsem="-1" aria-label="Semana anterior">‹</button>
+    <span class="wk">Semana ${fmtCurto(S.semana)} a ${fmtCurto(addDays(S.semana,6))}</span>
+    <button data-navsem="1" aria-label="Próxima semana">›</button></div>`;
+}
+function draftFromWeek(w){
+  return estrutura(w).flatMap(g => g.acts).map(a => ({ id:a.id, grupo:a.grupo||"", descricao:a.descricao||"", unidade:a.unidade||"", qtdMes:a.qtdMes ?? null, prog:{...(a.prog||{})} }));
+}
+function renderProg(){
+  const el = $("#v-prog");
+  if (!S.obraId){ el.innerHTML = semObra(); setSavebar(""); return; }
+  if (!S.draft) S.draft = draftFromWeek(S.week);
+  const grupos = [...new Set([...GRUPOS_PADRAO, ...S.draft.map(a => a.grupo).filter(Boolean)])];
+  let h = weekbar();
+  h += `<div class="row" style="margin-bottom:12px">
+      <button class="btn peq" id="copiarAnt">Copiar atividades da semana anterior</button>
+      <span style="color:var(--mut);font-size:13px">Preencha a quantidade programada em cada dia. O realizado é lançado no Diário do dia.</span></div>`;
+  h += `<datalist id="grupos">${grupos.map(g => `<option value="${esc(g)}">`).join("")}</datalist>`;
+  if (!S.draft.length) h += `<div class="card vazio">Nenhuma atividade programada nesta semana.</div>`;
+  S.draft.forEach((a,i) => {
+    h += `<div class="pa" data-i="${i}">
+      <div class="top">
+        <div><div class="lbl">Grupo</div><input list="grupos" data-f="grupo" value="${esc(a.grupo)}" placeholder="TERRAPLANAGEM"></div>
+        <div class="desc"><div class="lbl">Descrição</div><input data-f="descricao" value="${esc(a.descricao)}" placeholder="TUBO DE CONCRETO DM 800MM"></div>
+        <div><div class="lbl">Unidade</div><input list="unidades" data-f="unidade" value="${esc(a.unidade)}" placeholder="m"></div>
+        <div><div class="lbl">Qtde. mês</div><input inputmode="decimal" data-f="qtdMes" value="${a.qtdMes===null?"":fmtNum(a.qtdMes)}"></div>
+        <div class="ctl"><button data-mv="-1" title="Subir">↑</button><button data-mv="1" title="Descer">↓</button><button data-rm title="Excluir" style="color:var(--erro)">✕</button></div>
+      </div>
+      <div class="dias">${DIAS.map((dn,d) => `<div class="${d>=5?"fds":""}"><label>${dn} ${fmtCurto(addDays(S.semana,d))}</label>
+        <input inputmode="decimal" data-d="${d}" value="${val(a.prog,d)===null?"":fmtNum(val(a.prog,d))}"></div>`).join("")}</div>
+    </div>`;
+  });
+  h += `<button class="btn" id="addAct">+ Atividade</button>`;
+  el.innerHTML = h;
+  setSavebar(`<button class="btn pri" id="salvarProg">Salvar programação</button>`);
+}
+function syncDraftFromDom(){
+  $$("#v-prog .pa").forEach(div => {
+    const a = S.draft[+div.dataset.i];
+    div.querySelectorAll("[data-f]").forEach(i => {
+      a[i.dataset.f] = i.dataset.f === "qtdMes" ? num(i.value) : i.value.trim().toUpperCase().replace(/^M2$/,"m²").replace(/^M3$/,"m³");
+      if (i.dataset.f === "unidade") a.unidade = i.value.trim();
+    });
+    a.prog = {};
+    div.querySelectorAll("[data-d]").forEach(i => { const v = num(i.value); if (v !== null) a.prog[i.dataset.d] = v; });
+  });
+}
+async function salvarProg(){
+  syncDraftFromDom();
+  if (S.draft.some(a => !a.descricao || !a.grupo)){ toast("Preencha grupo e descrição de todas as atividades.", true); return; }
+  // ordena pelo grupo (na ordem em que aparecem) para manter a numeração do modelo
+  const ordemGrupo = []; S.draft.forEach(a => { if (!ordemGrupo.includes(norm(a.grupo))) ordemGrupo.push(norm(a.grupo)); });
+  const lista = [...S.draft].sort((x,y) => ordemGrupo.indexOf(norm(x.grupo)) - ordemGrupo.indexOf(norm(y.grupo)));
+  const paths = {};
+  lista.forEach((a,i) => {
+    const b = `atividades.${a.id}`;
+    paths[`${b}.ordem`] = i; paths[`${b}.grupo`] = a.grupo; paths[`${b}.descricao`] = a.descricao;
+    paths[`${b}.unidade`] = a.unidade || "un"; paths[`${b}.qtdMes`] = a.qtdMes === null ? DEL : a.qtdMes;
+    paths[`${b}.prog`] = a.prog;
+  });
+  for (const id of Object.keys(S.week.atividades || {})) if (!lista.find(a => a.id === id)) paths[`atividades.${id}`] = DEL;
+  const b = $("#salvarProg"); b.disabled = true; b.textContent = "Salvando...";
+  try { await patchWeek(paths); await loadWeek(); renderProg(); toast("Programação salva."); }
+  catch(e){ console.error(e); toast("Erro ao salvar: " + e.message, true); b.disabled = false; b.textContent = "Salvar programação"; }
+}
+async function copiarAnterior(){
+  syncDraftFromDom();
+  const ant = await getWeek(S.obraId, addDays(S.semana,-7));
+  const acts = draftFromWeek(ant);
+  if (!acts.length){ toast("A semana anterior não tem programação.", true); return; }
+  if (S.draft.length && !confirm("Substituir as atividades desta tela pelas da semana anterior?")) return;
+  S.draft = acts.map(a => ({ ...a, prog:{...a.prog} }));
+  renderProg(); toast("Copiado. Revise as quantidades e salve.");
+}
+
+/* ---- Semana / Exportar ---- */
+function refPadrao(){
+  const fim = addDays(S.semana,6), y = ontem();
+  if (y < S.semana) return S.semana;
+  return y > fim ? fim : y;
+}
+function renderSemana(){
+  const el = $("#v-semana");
+  if (!S.obraId){ el.innerHTML = semObra(); setSavebar(""); return; }
+  const w = S.week, ref = S.refSemana && S.refSemana >= S.semana && S.refSemana <= addDays(S.semana,6) ? S.refSemana : refPadrao();
+  S.refSemana = ref;
+  const ate = dayIdx(ref), grupos = estrutura(w), nps = naoProgList(w);
+  const preenchidos = Object.keys(w.atualizado || {}).length;
+  let h = weekbar();
+  h += `<div class="kpi">
+    <div><b>${fmtPct(aderenciaMedia(w, ate))}</b><span>Aderência média até ${fmtCurto(ref)}</span></div>
+    <div><b>${preenchidos}/7</b><span>Dias com diário preenchido</span></div>
+    <div><b>${Object.keys(w.atividades||{}).length}</b><span>Atividades programadas</span></div>
+    <div><b>${nps.length}</b><span>Não programadas</span></div></div>`;
+  h += `<div class="row" style="margin-bottom:12px">
+    <label style="font-size:14px">Data da atualização: <input type="date" id="refInp" value="${ref}" min="${S.semana}" max="${addDays(S.semana,6)}" style="padding:7px;border:1px solid var(--borda);border-radius:8px"></label>
+    <button class="btn pri" id="expObra">Exportar Excel — esta obra</button>
+    <button class="btn" id="expTodas">Exportar Excel — todas as obras</button></div>`;
+  h += `<div class="tbwrap"><table class="sem"><thead><tr><th>ITEM</th><th>DESCRIÇÃO</th><th>PROG./REAL</th><th>SEMANA</th><th>UN</th>
+    ${DIAS.map((dn,d) => `<th class="${d>=5?"fds":""}">${dn}<br>${fmtCurto(addDays(S.semana,d))}</th>`).join("")}<th>ADERÊNCIA</th></tr></thead><tbody>`;
+  if (!grupos.length) h += `<tr><td colspan="13" class="vazio">Sem programação nesta semana.</td></tr>`;
+  for (const g of grupos){
+    h += `<tr class="g"><td>${g.item}</td><td class="desc" colspan="12">${esc(g.nome)}</td></tr>`;
+    for (const a of g.acts){
+      const ad = aderencia(a, ate);
+      h += `<tr class="p"><td rowspan="2">${a.item}</td><td rowspan="2" class="desc">${esc(a.descricao)}</td><td class="pr">PROGRAMADO</td><td class="v">${fmtNum(somaSemana(a.prog))}</td><td rowspan="2">${esc(a.unidade)}</td>
+        ${DIAS.map((_,d) => `<td class="v">${fmtNum(val(a.prog,d))}</td>`).join("")}<td rowspan="2" class="ad">${fmtPct(ad)}</td></tr>
+        <tr><td>REALIZADO</td><td>${fmtNum(somaSemana(a.real))}</td>
+        ${DIAS.map((_,d) => { const r = val(a.real,d), p = val(a.prog,d); return `<td class="${r!==null&&p&&r<p?"baixo":""}">${fmtNum(r)}</td>`; }).join("")}</tr>`;
+    }
+  }
+  if (nps.length){
+    h += `<tr><td colspan="13" style="background:#C4BD97;font-weight:700;text-align:left">ATIVIDADES NÃO PROGRAMADAS</td></tr>`;
+    for (const a of nps) h += `<tr><td></td><td class="desc">${esc(a.descricao)}</td><td style="background:#DDD9C4">REALIZADO</td><td>${fmtNum(somaSemana(a.real))}</td><td>${esc(a.unidade)}</td>${DIAS.map((_,d) => `<td>${fmtNum(val(a.real,d))}</td>`).join("")}<td></td></tr>`;
+  }
+  h += `<tr><td colspan="5" style="background:#FFFF00;font-weight:700">CLIMA (manhã / tarde / noite)</td>${DIAS.map((_,d) => {
+      const c = (w.clima||{})[d] || {}; return `<td style="font-size:11px">${TURNOS.map(([k]) => c[k] ? c[k][0] : "·").join(" / ")}</td>`; }).join("")}<td></td></tr>`;
+  h += `</tbody></table></div>`;
+  const obs = Object.entries(w.obs || {}).sort();
+  if (obs.length) h += `<div class="card" style="margin-top:12px"><h3>Observações</h3>${obs.map(([d,t]) => `<p style="margin:4px 0"><b>${DIAS[d]} ${fmtCurto(addDays(S.semana,+d))}:</b> ${esc(t)}</p>`).join("")}</div>`;
+  el.innerHTML = h;
+  setSavebar("");
+}
+
+/* ---- Obras ---- */
+function renderObras(){
+  const el = $("#v-obras");
+  const lista = [...S.obras].sort((a,b) => (b.ativa!==false) - (a.ativa!==false) || a.nome.localeCompare(b.nome));
+  let h = `<div class="card"><h3>Nova obra</h3>
+    <div class="row"><input id="novaObra" placeholder="Nome da obra (ex.: CONSELHEIRO LAFAIETE)" style="flex:2;min-width:220px;padding:9px;border:1px solid var(--borda);border-radius:8px">
+    <input id="novoEng" placeholder="Engenheiro responsável" style="flex:1;min-width:160px;padding:9px;border:1px solid var(--borda);border-radius:8px">
+    <button class="btn pri" id="addObra">Adicionar</button></div></div>`;
+  h += `<div class="card"><h3>Obras cadastradas</h3>`;
+  if (!lista.length) h += `<div class="vazio">Nenhuma obra ainda.</div>`;
+  for (const o of lista){
+    h += `<div class="ob ${o.ativa===false?"inativa":""}" data-id="${o.id}">
+      <input data-of="nome" value="${esc(o.nome)}"><input data-of="engenheiro" value="${esc(o.engenheiro||"")}" placeholder="Engenheiro">
+      <button class="btn peq" data-salvaobra>Salvar</button>
+      <button class="btn peq" data-ativa>${o.ativa===false?"Reativar":"Encerrar"}</button></div>`;
+  }
+  h += `</div><div class="card"><h3>Este aparelho</h3><div class="row">Nome de quem preenche: <b>${esc(S.nome||"—")}</b> <button class="btn peq" id="trocaNome2">Alterar</button></div></div>`;
+  el.innerHTML = h;
+  setSavebar("");
+}
+
+function setSavebar(html){ $("#savebar").innerHTML = html; $("#savebar").style.display = html ? "flex" : "none"; }
+function render(){
+  ({ diario:renderDiario, prog:renderProg, semana:renderSemana, obras:renderObras })[S.tab]();
+}
+
+/* ------------------------------- exportação ------------------------------- */
+const FONT = "Aptos Narrow";
+const C = { DK2:"FF17375E", ACC:"FF4F81BD", ACCL:"FFDCE6F1", ADER:"FFC1FFDD", AMAR:"FFFFFF00", CINZA35:"FFA6A6A6", CINZA25:"FFBFBFBF",
+            TAN25:"FFC4BD97", TAN10:"FFDDD9C4", BRANCO:"FFFFFFFF", MOLDURA:"FF0070C0", VERM:"FFC00000" };
+const thin = { style:"thin", color:{ argb:"FF000000" } };
+const BOX = { top:thin, left:thin, bottom:thin, right:thin };
+const NUM = '#,##0.00;-#,##0.00;;@';
+const col = n => { let s = ""; while (n > 0){ const m = (n-1)%26; s = String.fromCharCode(65+m) + s; n = Math.floor((n-1)/26); } return s; };
+const xlDate = s => { const [y,m,d] = s.split("-").map(Number); return new Date(Date.UTC(y,m-1,d)); };
+
+function sty(cell, o = {}){
+  cell.font = { name:FONT, size:o.size||12, bold:!!o.bold, italic:!!o.italic, color:{ argb:o.color||"FF000000" } };
+  cell.alignment = { horizontal:o.h||"center", vertical:o.v||"middle", wrapText:o.wrap!==false };
+  if (o.fill) cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:o.fill } };
+  if (o.border !== false) cell.border = BOX;
+  if (o.fmt) cell.numFmt = o.fmt;
+}
+// mescla, escreve o valor e aplica o estilo em todas as células do intervalo (bordas inclusive)
+function bloco(ws, r1, c1, r2, c2, value, o){
+  if (r1 !== r2 || c1 !== c2) ws.mergeCells(r1, c1, r2, c2);
+  for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) sty(ws.getCell(r,c), o);
+  if (value !== undefined) ws.getCell(r1,c1).value = value;
+}
+
+let IMGS = null;
+async function carregaImgs(){
+  if (IMGS) return IMGS;
+  const b64 = async f => { const blob = await (await fetch(f)).blob(); return await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); }); };
+  IMGS = { pdca: await b64("pdca.png"), eng: await b64("eng.png") };
+  return IMGS;
+}
+
+// realizado acumulado no mês da data de atualização, somando todas as semanas da obra
+function realizadoMes(semanas, ref){
+  const mes = ref.slice(0,7), tot = {};
+  for (const w of semanas){
+    const all = [...Object.values(w.atividades||{})];
+    for (const a of all){
+      const k = norm(a.descricao) + "|" + norm(a.unidade);
+      for (let d = 0; d < 7; d++){
+        const dt = addDays(w.inicio, d);
+        if (dt.slice(0,7) !== mes || dt > ref) continue;
+        const v = val(a.real, d); if (v !== null) tot[k] = (tot[k]||0) + v;
+      }
+    }
+  }
+  return tot;
+}
+
+function montaPlanilha(wb, nomeAba, obra, w, ref, semanas, imgs){
+  const ws = wb.addWorksheet(nomeAba, {
+    views: [{ state:"frozen", ySplit:6, showGridLines:false, zoomScale:70 }],
+    pageSetup: { orientation:"landscape", paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0,
+                 margins:{ left:0.25, right:0.25, top:0.4, bottom:0.4, header:0.2, footer:0.2 } }
+  });
+  // colunas iguais ao modelo (as colunas antigas ocultas P–AG foram retiradas; P = espaço, Q = aderência)
+  const larg = { 1:4.33, 2:1.66, 3:16.16, 4:34.83, 5:17.83, 6:13.83, 7:16, 8:11.66, 16:3.16, 17:22.66, 18:1.66 };
+  for (let c = 1; c <= 18; c++) ws.getColumn(c).width = larg[c] || 14;
+  const CI = 9, CO = 15, CQ = 17, CR = 18;      // I..O = dias, Q = aderência, R = moldura
+  const ate = dayIdx(ref);
+  const datas = DIAS.map((_,d) => addDays(w.inicio, d));
+
+  // cabeçalho
+  ws.getRow(2).height = 6.75; ws.getRow(3).height = 23.45; ws.getRow(4).height = 18; ws.getRow(5).height = 18; ws.getRow(6).height = 39.75; ws.getRow(7).height = 22.15;
+  bloco(ws, 3,3, 5,3, "", { fill:C.BRANCO });
+  bloco(ws, 3,4, 5,8, `PROGRAMAÇÃO SEMANAL\nOBRA - ${obra.nome}`, { fill:C.BRANCO, bold:true, size:22 });
+  bloco(ws, 3,9, 5,11, "DATA DA ATUALIZAÇÃO:", { fill:C.BRANCO, bold:true, size:14 });
+  bloco(ws, 3,12, 5,15, xlDate(ref), { fill:C.BRANCO, bold:true, size:14, fmt:"dd/mm/yyyy" });
+  bloco(ws, 3,CQ, 6,CQ, "ADERÊNCIA DIÁRIA / ACUMULADA\n(REAL/PROG)\n%", { fill:C.BRANCO, size:14 });
+  ws.addImage(wb.addImage({ base64:imgs.eng, extension:"png" }), { tl:{ col:2.25, row:2.12 }, ext:{ width:62, height:56 } });
+  ws.addImage(wb.addImage({ base64:imgs.pdca, extension:"png" }), { tl:{ col:7.15, row:2.08 }, ext:{ width:80, height:64 } });
+
+  const cab = ["ITEM","RESUMO GERAL DA SEMANA","PROG. / REAL","QDTE. MÊS","QDTE. SEMANA","UNIDADE"];
+  cab.forEach((t,i) => bloco(ws, 6,3+i, 6,3+i, t, { fill:C.BRANCO, bold:true }));
+  datas.forEach((dt,d) => bloco(ws, 6,CI+d, 6,CI+d, xlDate(dt), { fill: d>=5 ? C.CINZA25 : C.BRANCO, bold:true, fmt:"ddd dd/mm/yy" }));
+
+  bloco(ws, 7,3, 7,3, 1, { fill:C.DK2, color:C.BRANCO });
+  bloco(ws, 7,4, 7,4, "DESCRIÇÃO", { fill:C.DK2, color:C.BRANCO, bold:true, size:14 });
+  for (let c = 5; c <= CO; c++) bloco(ws, 7,c, 7,c, "", { fill:C.DK2, color:C.BRANCO });
+
+  // atividades
+  const mesReal = realizadoMes(semanas, ref);
+  const adRows = [];
+  let r = 8;
+  for (const g of estrutura(w)){
+    ws.getRow(r).height = 17.25;
+    bloco(ws, r,3, r,3, g.item, { fill:C.ACC, bold:true, size:13 });
+    bloco(ws, r,4, r,4, g.nome, { fill:C.ACC, bold:true, size:13 });
+    for (let c = 5; c <= CO; c++) bloco(ws, r,c, r,c, "", { fill:C.ACC });
+    r++;
+    for (const a of g.acts){
+      const rp = r, rr = r+1;
+      ws.getRow(rp).height = 18; ws.getRow(rr).height = 18;
+      bloco(ws, rp,3, rr,3, a.item, {});
+      bloco(ws, rp,4, rr,4, a.descricao, { h:"left" });
+      bloco(ws, rp,5, rp,5, "PROGRAMADO", { fill:C.ACCL });
+      bloco(ws, rr,5, rr,5, "REALIZADO", {});
+      bloco(ws, rp,6, rp,6, a.qtdMes ?? null, { fill:C.ACCL, fmt:NUM });
+      bloco(ws, rr,6, rr,6, mesReal[norm(a.descricao)+"|"+norm(a.unidade)] ?? null, { fmt:NUM });
+      bloco(ws, rp,7, rp,7, { formula:`SUM(${col(CI)}${rp}:${col(CO)}${rp})`, result: somaSemana(a.prog) || 0 }, { fill:C.ACCL, fmt:NUM });
+      bloco(ws, rr,7, rr,7, { formula:`SUM(${col(CI)}${rr}:${col(CO)}${rr})`, result: somaSemana(a.real) || 0 }, { fmt:NUM });
+      bloco(ws, rp,8, rr,8, a.unidade, {});
+      for (let d = 0; d < 7; d++){
+        const p = val(a.prog,d), x = val(a.real,d);
+        bloco(ws, rp,CI+d, rp,CI+d, p, { fill:C.ACCL, fmt:NUM });
+        bloco(ws, rr,CI+d, rr,CI+d, x, { fmt:NUM, color: (x !== null && p && x < p) ? C.VERM : undefined, bold: x !== null && p && x < p });
+      }
+      const I = col(CI), O = col(CO), ad = aderencia(a, ate);
+      bloco(ws, rp,CQ, rr,CQ, { formula:`IFERROR(SUMIF($${I}$6:$${O}$6,"<="&$L$3,${I}${rr}:${O}${rr})/SUMIF($${I}$6:$${O}$6,"<="&$L$3,${I}${rp}:${O}${rp}),"")`, result: ad === null ? "" : ad },
+            { fill:C.ADER, fmt:"0%", bold:true });
+      adRows.push(rp);
+      r += 2;
+    }
+  }
+  // aderência média no topo da coluna
+  bloco(ws, 7,CQ, 7,CQ, adRows.length ? { formula:`IFERROR(AVERAGE(${col(CQ)}8:${col(CQ)}${r-1}),"")`, result: aderenciaMedia(w, ate) ?? "" } : "",
+        { fill:C.ADER, bold:true, size:14, fmt:"0%" });
+
+  // clima
+  ws.getRow(r).height = 15.75; r++;
+  const rc = r;
+  [rc, rc+1, rc+2, rc+3].forEach(x => ws.getRow(x).height = 18);
+  bloco(ws, rc,3, rc,4, "FIM DE SEMANA", { fill:C.CINZA25, bold:true });
+  bloco(ws, rc,8, rc,8, "CLIMA", { fill:C.AMAR, bold:true, size:14 });
+  datas.forEach((dt,d) => bloco(ws, rc,CI+d, rc,CI+d, xlDate(dt), { fill:C.AMAR, fmt:"dd/mm" }));
+  CLIMAS.forEach((c,i) => bloco(ws, rc+1+i,6, rc+1+i,7, c.k, { fill:c.argb, color:c.fargb, bold:true }));
+  TURNOS.forEach(([k,lbl],i) => {
+    bloco(ws, rc+1+i,8, rc+1+i,8, lbl, { bold:true });
+    for (let d = 0; d < 7; d++){
+      const v = ((w.clima||{})[d] || {})[k], c = CLIMAS.find(x => x.k === v);
+      bloco(ws, rc+1+i,CI+d, rc+1+i,CI+d, v || "", c ? { fill:c.argb, color:c.fargb, size:10 } : { size:10 });
+    }
+  });
+  // observações
+  bloco(ws, rc+3,3, rc+3,5, "OBS.:", { fill:C.CINZA35, bold:true, h:"left" });
+  const obsTxt = Object.entries(w.obs||{}).sort().map(([d,t]) => `${DIAS[d]} ${fmtCurto(addDays(w.inicio,+d))}: ${t}`).join("\n");
+  const linhasObs = Math.max(3, obsTxt.split("\n").length);
+  bloco(ws, rc+4,3, rc+6,CO, obsTxt, { h:"left", v:"top", bold:false });
+  const hObs = Math.max(18, Math.ceil(linhasObs*16/3));
+  [rc+4, rc+5, rc+6].forEach(x => ws.getRow(x).height = hObs);
+  r = rc+7;
+
+  // não programadas
+  ws.getRow(r).height = 6; r++;
+  const rn = r;
+  ws.getRow(rn).height = 18;
+  bloco(ws, rn,3, rn,4, "ATIVIDADES NÃO PROGRAMADAS", { fill:C.TAN25, bold:true, size:11 });
+  bloco(ws, rn,5, rn,5, "REALIZADO", { fill:C.TAN25, bold:true, size:11 });
+  bloco(ws, rn,6, rn,6, "", { fill:C.TAN25 });
+  bloco(ws, rn,7, rn,7, "QDTE. SEMANA", { fill:C.TAN25, bold:true, size:11 });
+  bloco(ws, rn,8, rn,8, "UNIDADE", { fill:C.TAN25, bold:true, size:11 });
+  datas.forEach((dt,d) => bloco(ws, rn,CI+d, rn,CI+d, xlDate(dt), { fill:C.TAN25, bold:true, size:11, fmt:"dd/mm" }));
+  r++;
+  const nps = naoProgList(w);
+  const linhasNp = Math.max(2, nps.length);
+  for (let i = 0; i < linhasNp; i++){
+    const a = nps[i];
+    ws.getRow(r).height = 18;
+    bloco(ws, r,3, r,4, a ? a.descricao : "", { h:"left", bold:true });
+    bloco(ws, r,5, r,5, "REALIZADO", { fill:C.TAN10 });
+    bloco(ws, r,6, r,6, "", {});
+    bloco(ws, r,7, r,7, { formula:`SUM(${col(CI)}${r}:${col(CO)}${r})`, result: a ? (somaSemana(a.real)||0) : 0 }, { fmt:NUM });
+    bloco(ws, r,8, r,8, a ? a.unidade : "", {});
+    for (let d = 0; d < 7; d++) bloco(ws, r,CI+d, r,CI+d, a ? val(a.real,d) : null, { fmt:NUM });
+    r++;
+  }
+
+  // rodapé
+  ws.getRow(r).height = 8; r++;
+  const ult = Object.values(w.atualizado||{}).sort((a,b) => a.em < b.em ? 1 : -1)[0];
+  bloco(ws, r,3, r,CO, `Gerado pelo Diário de Produção LM em ${new Date().toLocaleString("pt-BR")}` + (ult ? ` · último lançamento: ${ult.por}, ${new Date(ult.em).toLocaleString("pt-BR")}` : ""),
+        { h:"left", italic:true, size:9, color:"FF7F7F7F", border:false });
+  r++;
+  const fim = r;
+  ws.getRow(fim).height = 6.75;
+
+  // moldura azul (a "borda" que era copiada como imagem para o grupo)
+  const med = { style:"medium", color:{ argb:C.MOLDURA } };
+  for (let c = 2; c <= CR; c++){
+    ws.getCell(2,c).border = { ...(ws.getCell(2,c).border||{}), top:med };
+    ws.getCell(fim,c).border = { ...(ws.getCell(fim,c).border||{}), bottom:med };
+  }
+  for (let x = 2; x <= fim; x++){
+    ws.getCell(x,2).border = { ...(ws.getCell(x,2).border||{}), left:med };
+    ws.getCell(x,CR).border = { ...(ws.getCell(x,CR).border||{}), right:med };
+  }
+  ws.pageSetup.printArea = `B2:${col(CR)}${fim}`;
+  return ws;
+}
+
+async function exportar(obras){
+  const ref = S.refSemana || refPadrao();
+  const inicio = S.semana;
+  const btns = $$("#expObra,#expTodas"); btns.forEach(b => b.disabled = true);
+  try {
+    const imgs = await carregaImgs();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = "Diário de Produção LM"; wb.created = new Date();
+    const usados = new Set();
+    let n = 0;
+    for (const o of obras){
+      const semanas = await store.list(COL_SEMANAS, "obraId", o.id);
+      const w = semanas.find(s => s.inicio === inicio) || blankWeek(o.id, inicio);
+      if (obras.length > 1 && !Object.keys(w.atividades||{}).length && !Object.keys(w.naoProg||{}).length) continue;
+      let nome = o.nome.replace(/[\[\]:*?\/\\]/g," ").slice(0,31).trim() || "Obra";
+      let k = 2; while (usados.has(nome.toUpperCase())) nome = nome.slice(0,28) + " " + k++;
+      usados.add(nome.toUpperCase());
+      montaPlanilha(wb, nome, o, w, ref, semanas, imgs); n++;
+    }
+    if (!n){ toast("Nenhuma obra tem programação nesta semana.", true); return; }
+    const buf = await wb.xlsx.writeBuffer();
+    const nomeArq = `PROGRAMAÇÃO SEMANAL - ${obras.length > 1 ? "TODAS AS OBRAS" : obras[0].nome} - ${fmtCurto(inicio).replace("/","-")} a ${fmtCurto(addDays(inicio,6)).replace("/","-")}.xlsx`;
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([buf], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    a.download = nomeArq; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`Excel gerado (${n} obra${n>1?"s":""}).`);
+  } catch(e){ console.error(e); toast("Erro ao gerar Excel: " + e.message, true); }
+  finally { btns.forEach(b => b.disabled = false); }
+}
+
+/* --------------------------------- eventos --------------------------------- */
+async function irParaDia(novo){
+  S.dia = novo;
+  const seg = mondayOf(novo);
+  if (seg !== S.semana){ S.semana = seg; await loadWeek(); }
+  render();
+}
+async function irParaSemana(delta){
+  if (S.tab === "prog" && S.draft) syncDraftFromDom();
+  S.semana = addDays(S.semana, 7*delta);
+  S.dia = addDays(S.semana, dayIdx(S.dia));
+  S.refSemana = null;
+  await loadWeek(); render();
+}
+
+document.addEventListener("click", async ev => {
+  const t = ev.target.closest("button,a"); if (!t) return;
+  if (t.dataset.tab){
+    if (S.tab === "prog" && S.draft) syncDraftFromDom();
+    S.tab = t.dataset.tab;
+    $$("nav button").forEach(b => b.classList.toggle("on", b === t));
+    $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + S.tab));
+    render(); return;
+  }
+  if (t.dataset.navdia){ await irParaDia(addDays(S.dia, +t.dataset.navdia)); return; }
+  if (t.dataset.navsem){ await irParaSemana(+t.dataset.navsem); return; }
+  if (t.dataset.clima){
+    const k = t.dataset.clima, v = t.dataset.v;
+    S.clima[k] = S.clima[k] === v ? undefined : v;
+    if (!S.clima[k]) delete S.clima[k];
+    $$(`[data-clima="${k}"]`).forEach(b => {
+      const c = CLIMAS.find(x => x.k === b.dataset.v), on = S.clima[k] === b.dataset.v;
+      b.classList.toggle("sel", on); b.style.background = on ? c.cor : "#fff"; b.style.color = on ? c.txt : "#000";
+    });
+    return;
+  }
+  if (t.id === "addNp"){ addNpRow(); return; }
+  if (t.id === "salvarDia"){ await salvarDiario(); return; }
+  if (t.id === "trocaNome" || t.id === "trocaNome2"){
+    ev.preventDefault();
+    const n = prompt("Seu nome:", S.nome); if (n && n.trim()){ S.nome = n.trim(); localStorage.setItem("diarioLM_nome", S.nome); render(); }
+    return;
+  }
+  // programação
+  if (t.id === "addAct"){
+    syncDraftFromDom();
+    const ult = S.draft[S.draft.length-1];
+    S.draft.push({ id:uid(), grupo: ult?.grupo || "", descricao:"", unidade:"", qtdMes:null, prog:{} });
+    renderProg(); const divs = $$("#v-prog .pa"); divs[divs.length-1]?.querySelector('[data-f="descricao"]').focus(); return;
+  }
+  if (t.dataset.mv || t.hasAttribute("data-rm")){
+    syncDraftFromDom();
+    const i = +t.closest(".pa").dataset.i;
+    if (t.hasAttribute("data-rm")){
+      const a = S.draft[i];
+      if ((a.descricao || Object.keys(a.prog).length) && !confirm(`Excluir "${a.descricao || "atividade"}" desta semana?` + (somaSemana(S.week.atividades?.[a.id]?.real) ? "\nAtenção: ela já tem produção lançada, que também será apagada." : ""))) return;
+      S.draft.splice(i,1);
+    } else {
+      const j = i + (+t.dataset.mv); if (j < 0 || j >= S.draft.length) return;
+      [S.draft[i], S.draft[j]] = [S.draft[j], S.draft[i]];
+    }
+    renderProg(); return;
+  }
+  if (t.id === "copiarAnt"){ await copiarAnterior(); return; }
+  if (t.id === "salvarProg"){ await salvarProg(); return; }
+  // exportação
+  if (t.id === "expObra"){ await exportar([obraAtual()]); return; }
+  if (t.id === "expTodas"){ await exportar(S.obras.filter(o => o.ativa !== false)); return; }
+  // obras
+  if (t.id === "addObra"){
+    const nome = $("#novaObra").value.trim().toUpperCase(); if (!nome){ toast("Informe o nome da obra.", true); return; }
+    if (S.obras.find(o => norm(o.nome) === norm(nome))){ toast("Já existe uma obra com esse nome.", true); return; }
+    const id = uid();
+    await store.set(COL_OBRAS, id, { nome, engenheiro: $("#novoEng").value.trim(), ativa:true, criadoEm:new Date().toISOString() });
+    await carregaObras(); S.obraId = id; localStorage.setItem("diarioLM_obra", id);
+    renderObraSel(); await loadWeek(); renderObras(); toast("Obra adicionada."); return;
+  }
+  if (t.hasAttribute("data-salvaobra") || t.hasAttribute("data-ativa")){
+    const div = t.closest(".ob"), id = div.dataset.id, o = S.obras.find(x => x.id === id);
+    const upd = t.hasAttribute("data-ativa")
+      ? { ativa: o.ativa === false }
+      : { nome: div.querySelector('[data-of="nome"]').value.trim().toUpperCase() || o.nome, engenheiro: div.querySelector('[data-of="engenheiro"]').value.trim() };
+    await store.patch(COL_OBRAS, id, upd);
+    await carregaObras(); renderObraSel(); await loadWeek(); renderObras(); toast("Obra atualizada."); return;
+  }
+});
+document.addEventListener("change", async ev => {
+  if (ev.target.id === "diaInp" && ev.target.value){ await irParaDia(ev.target.value); }
+  if (ev.target.id === "refInp" && ev.target.value){ S.refSemana = ev.target.value; renderSemana(); }
+  if (ev.target.id === "obraSel"){
+    S.obraId = ev.target.value; localStorage.setItem("diarioLM_obra", S.obraId);
+    await loadWeek(); render();
+  }
+});
+
+async function carregaObras(){ S.obras = await store.list(COL_OBRAS); }
+
+async function start(){
+  document.body.insertAdjacentHTML("beforeend", `<datalist id="unidades">${UNIDADES.map(u => `<option value="${u}">`).join("")}</datalist>`);
+  try {
+    await initDb();
+    await carregaObras();
+  } catch(e){
+    console.error(e);
+    $("#v-diario").innerHTML = `<div class="card vazio">Não foi possível conectar ao banco de dados.<br>${esc(e.message)}<br><br><button class="btn" onclick="location.reload()">Tentar de novo</button></div>`;
+    return;
+  }
+  renderObraSel();
+  await loadWeek();
+  render();
+}
+
+// senha de acesso (trava simples, igual aos outros sistemas da LM)
+function liberar(){ $("#gate").remove(); start(); }
+if (localStorage.getItem("diarioLM_ok") === "1") liberar();
+else {
+  const tenta = () => {
+    if ($("#gatePwd").value === SITE_PASSWORD){ localStorage.setItem("diarioLM_ok","1"); liberar(); }
+    else { toast("Senha incorreta.", true); $("#gatePwd").select(); }
+  };
+  $("#gateBtn").onclick = tenta;
+  $("#gatePwd").addEventListener("keydown", e => { if (e.key === "Enter") tenta(); });
+  $("#gatePwd").focus();
+}
+</script>
+</body>
+</html>
